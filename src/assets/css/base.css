@@ -8,6 +8,10 @@
   --border-radius: 4px;
   --transition-duration: 0.3s;
 }
+body,html {
+  box-sizing: border-box;
+  overscroll-behavior-y: none;
+}
 ::-webkit-scrollbar {
   width: 10px;
   height: 400px;
