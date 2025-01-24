@@ -2,7 +2,7 @@
   <div
     class="font-mono bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-slate-800 dark:to-stone-800 text-white min-h-screen flex items-center justify-center"
   >
-    <div class="w-full max-w-4xl p-8 rounded-xl shadow-2xl"> 
+    <div class="w-full max-w-4xl p-8 rounded-xl shadow-2xl">
       <div class="max-h-[90vh] overflow-y-auto p-8 space-y-8">
         <h1 class="text-4xl font-extrabold text-center text-white">Work Hours Calculator</h1>
         <div id="sessions" class="space-y-8">
@@ -74,15 +74,33 @@
             <LucideDownload class="text-white" />
             <span>Export Schedule</span>
           </button>
-          <button
-            class="theme-toggle p-4 rounded-full bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 transition-transform transform hover:scale-105 absolute top-0 right-0 size-16 m-6"
-            :class="{ 'theme-toggle--toggled': isDarkMode }"
-            @click="toggleTheme"
+          <div
+            id="theme-toggler"
+            class="theme-toggle"
             title="Toggle theme"
-            aria-label="Toggle theme"
           >
-            <LucideSun class="theme-toggle__expand text-slate-800 dark:text-yellow-300" />
-          </button>
+            <span class="theme-toggle-sr">Toggle theme</span>
+            <svg
+              @click="toggleTheme"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+              width="1em"
+              height="1em"
+              fill="currentColor"
+              class="theme-toggle__expand bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 p-4 rounded-full  transition-transform transform hover:scale-105 absolute top-0 right-0 size-16 m-6"
+              viewBox="0 0 32 32"
+            >
+              <clipPath id="theme-toggle__expand__cutout">
+                <path d="M0-11h25a1 1 0 0017 13v30H0Z" />
+              </clipPath>
+              <g clip-path="url(#theme-toggle__expand__cutout)">
+                <circle cx="16" cy="16" r="8.4" />
+                <path
+                  d="M18.3 3.2c0 1.3-1 2.3-2.3 2.3s-2.3-1-2.3-2.3S14.7.9 16 .9s2.3 1 2.3 2.3zm-4.6 25.6c0-1.3 1-2.3 2.3-2.3s2.3 1 2.3 2.3-1 2.3-2.3 2.3-2.3-1-2.3-2.3zm15.1-10.5c-1.3 0-2.3-1-2.3-2.3s1-2.3 2.3-2.3 2.3 1 2.3 2.3-1 2.3-2.3 2.3zM3.2 13.7c1.3 0 2.3 1 2.3 2.3s-1 2.3-2.3 2.3S.9 17.3.9 16s1-2.3 2.3-2.3zm5.8-7C9 7.9 7.9 9 6.7 9S4.4 8 4.4 6.7s1-2.3 2.3-2.3S9 5.4 9 6.7zm16.3 21c-1.3 0-2.3-1-2.3-2.3s1-2.3 2.3-2.3 2.3 1 2.3 2.3-1 2.3-2.3 2.3zm2.4-21c0 1.3-1 2.3-2.3 2.3S23 7.9 23 6.7s1-2.3 2.3-2.3 2.4 1 2.4 2.3zM6.7 23C8 23 9 24 9 25.3s-1 2.3-2.3 2.3-2.3-1-2.3-2.3 1-2.3 2.3-2.3z"
+                />
+              </g>
+            </svg>
+          </div>
         </div>
         <div
           id="result"
@@ -106,9 +124,9 @@
     <OnlineTracker />
     <TimeCounter />
     FPS: {{ fps }}
-    <div v-if="isSupported">Battery: {{ level }}</div>
+    <div v-if="isSupported">Battery: {{ level * 100 }}%</div>
   </div>
-   <div class="absolute bottom-4 right-4 dark:text-gray-600 font-serif text-lg italic opacity-70">
+  <div class="absolute bottom-4 right-4 dark:text-gray-600 font-serif text-lg italic opacity-70">
     <span>Masri</span>
   </div>
 </template>
@@ -131,9 +149,15 @@ import {
 
 const { isSupported, level } = useBattery()
 const fps = useFps()
-const isDarkMode = ref(false)
-const sessions = useSessionStorage('sessions',[{ start: '08:00', end: '12:00' }])
-const resultMessage = useSessionStorage('resultMessage')
+const isDarkMode = useSessionStorage(
+  'darkMode',
+  window.matchMedia('(prefers-color-scheme: dark)').matches,
+)
+const sessions = useSessionStorage('sessions', [{ start: '08:00', end: '12:00' }])
+const resultMessage = useSessionStorage(
+  'resultMessage',
+  `Total Work Time: 4 hours, 0 minutes, 0 seconds`,
+)
 const { copy, copied } = useClipboard()
 
 const scheduleText = computed(() => {
@@ -147,6 +171,7 @@ const addSession = () => {
   const newStartTime = lastSession ? lastSession.end : '08:00'
   const newEndTime = addMinutesToTime(newStartTime, 240)
   sessions.value.push({ start: newStartTime, end: newEndTime })
+  calculateWorkHours()
 }
 
 const addBreak = () => {
@@ -154,6 +179,12 @@ const addBreak = () => {
   const breakStartTime = lastSession ? lastSession.end : '12:00'
   const breakEndTime = addMinutesToTime(breakStartTime, 30)
   sessions.value.push({ start: breakStartTime, end: breakEndTime })
+  calculateWorkHours()
+}
+
+const deleteSession = (index) => {
+  sessions.value.splice(index, 1)
+  calculateWorkHours()
 }
 
 const addMinutesToTime = (time, minutes) => {
@@ -162,10 +193,6 @@ const addMinutesToTime = (time, minutes) => {
   const newHours = Math.floor(totalMinutes / 60)
   const newMinutes = totalMinutes % 60
   return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
-}
-
-const deleteSession = (index) => {
-  sessions.value.splice(index, 1)
 }
 
 const calculateWorkHours = () => {
@@ -204,12 +231,13 @@ const exportSchedule = () => {
 
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value
+  var element = document.getElementById('theme-toggler')
   if (isDarkMode.value) {
     document.documentElement.classList.add('dark')
-    sessionStorage.setItem('darkMode', 'true')
+    element.classList.add('theme-toggle--toggled')
   } else {
     document.documentElement.classList.remove('dark')
-    sessionStorage.removeItem('darkMode')
+    element.classList.remove('theme-toggle--toggled')
   }
 }
 
