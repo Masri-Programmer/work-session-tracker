@@ -2,27 +2,7 @@
   <div
     class="font-mono bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-slate-800 dark:to-stone-800 text-white min-h-screen flex items-center justify-center"
   >
-    <div id="theme-toggler" class="theme-toggle" title="Toggle theme">
-      <span class="theme-toggle-sr">Toggle theme</span>
-      <svg
-        @click="toggleTheme"
-        xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
-        class="theme-toggle__expand bg-slate-300 dark:bg-slate-700 hover:bg-slate-400 dark:hover:bg-slate-600 p-3 rounded-full transition-transform transform hover:scale-105 absolute top-0 right-0 size-10 m-3 lg:w-16 lg:h-16 md:w-12 md:h-12 sm:w-10 sm:h-10 sm:m-4 sm:p-4"
-        fill="currentColor"
-        viewBox="0 0 32 32"
-      >
-        <clipPath id="theme-toggle__expand__cutout">
-          <path d="M0-11h25a1 1 0 0017 13v30H0Z" />
-        </clipPath>
-        <g clip-path="url(#theme-toggle__expand__cutout)">
-          <circle cx="16" cy="16" r="8.4" />
-          <path
-            d="M18.3 3.2c0 1.3-1 2.3-2.3 2.3s-2.3-1-2.3-2.3S14.7.9 16 .9s2.3 1 2.3 2.3zm-4.6 25.6c0-1.3 1-2.3 2.3-2.3s2.3 1 2.3 2.3-1 2.3-2.3 2.3-2.3-1-2.3-2.3zm15.1-10.5c-1.3 0-2.3-1-2.3-2.3s1-2.3 2.3-2.3 2.3 1 2.3 2.3-1 2.3-2.3 2.3zM3.2 13.7c1.3 0 2.3 1 2.3 2.3s-1 2.3-2.3 2.3S.9 17.3.9 16s1-2.3 2.3-2.3zm5.8-7C9 7.9 7.9 9 6.7 9S4.4 8 4.4 6.7s1-2.3 2.3-2.3S9 5.4 9 6.7zm16.3 21c-1.3 0-2.3-1-2.3-2.3s1-2.3 2.3-2.3 2.3 1 2.3 2.3-1 2.3-2.3 2.3zm2.4-21c0 1.3-1 2.3-2.3 2.3S23 7.9 23 6.7s1-2.3 2.3-2.3 2.4 1 2.4 2.3zM6.7 23C8 23 9 24 9 25.3s-1 2.3-2.3 2.3-2.3-1-2.3-2.3 1-2.3 2.3-2.3z"
-          />
-        </g>
-      </svg>
-    </div>
+    <ToggleTheme/>
     <div class="w-full sm:max-w-4xl p-1 sm:p-8 rounded-xl shadow-2xl">
       <div class="sm:max-h-[90vh] sm:overflow-y-auto p-4 sm:p-8 space-y-8">
         <h1 class="text-xl sm:text-3xl font-extrabold text-center text-white">
@@ -128,7 +108,7 @@
     <OnlineTracker />
     <TimeCounter />
     FPS: {{ fps }}
-    <div v-if="isSupported">Battery: {{ level * 100 }}%</div>
+    <div v-if="isSupported">Battery: {{ (level * 100).toFixed(0) }}%</div>
   </div>
   <div
     class="hidden sm:block absolute bottom-4 right-4 dark:text-gray-600 font-serif text-base sm:text-lg italic opacity-70"
@@ -142,6 +122,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useSessionStorage, useFps, useBattery, useClipboard } from '@vueuse/core'
 import TimeCounter from './components/TimeCounter.vue'
 import OnlineTracker from './components/OnlineTracker.vue'
+import ToggleTheme from './components/ToggleTheme.vue'
 import {
   LucideClock,
   LucidePlus,
@@ -155,10 +136,6 @@ import {
 
 const { isSupported, level } = useBattery()
 const fps = useFps()
-const isDarkMode = useSessionStorage(
-  'darkMode',
-  window.matchMedia('(prefers-color-scheme: dark)').matches,
-)
 const sessions = useSessionStorage('sessions', [{ start: '08:00', end: '12:00' }])
 const resultMessage = useSessionStorage(
   'resultMessage',
@@ -235,62 +212,32 @@ const exportSchedule = () => {
   link.click()
 }
 
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value
-  const element = document.getElementById('theme-toggler')
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark')
-    element.classList.add('theme-toggle--toggled')
-  } else {
-    document.documentElement.classList.remove('dark')
-    element.classList.remove('theme-toggle--toggled')
-  }
-}
-
-onMounted(() => {
-  if (isDarkMode.value) {
-    document.documentElement.classList.add('dark')
-    const element = document.getElementById('theme-toggler')
-    if (element) {
-      element.classList.add('theme-toggle--toggled')
-    }
-  }
-})
-
 const timeToSeconds = (time) => {
   const [hours, minutes] = time.split(':').map(Number)
   return hours * 3600 + minutes * 60
 }
 
 const handlePaste = (event, index, type) => {
-  event.preventDefault()
-  const pastedData = event.clipboardData.getData('text')
-  const timeRegex = /^(\d{2}):(\d{2})$/
-  const match = pastedData.match(timeRegex)
-
+  const pastedData = event.clipboardData.getData('text');
+const timeRegex = /^(\d{2}):(\d{2})(?::\d{2})?$/;
+  const match = pastedData.match(timeRegex);
   if (match) {
-    const formattedTime = `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`
+    const formattedTime = `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
     if (type === 'start') {
-      sessions.value[index].start = formattedTime
+      sessions.value[index].start = formattedTime;
     } else {
-      sessions.value[index].end = formattedTime
+      sessions.value[index].end = formattedTime;
     }
 
-    calculateWorkHours()
+    calculateWorkHours();
   }
-}
+};
+
 
 const copySchedule = () => {
   copy(scheduleText.value)
 }
 </script>
-
-<style scoped>
-.theme-toggle--toggled .theme-toggle__expand {
-  transform: rotate(180deg);
-  transition: transform 0.3s ease;
-}
-</style>
 
 <style>
 .buttons-container {
