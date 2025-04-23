@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "homepage": "https://Masri-Programmer.github.io/work-session-tracker",
+  "homepage": "https://tracker.masri.blog",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
