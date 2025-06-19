@@ -30,7 +30,7 @@
                 >Session {{ index + 1 }} - Kommen:</label
               >
               <div class="flex items-center space-x-4 w-full">
-                <LucideClock class="text-slate-600 dark:text-slate-400" />
+                <LucideClock class="text-slate-600 dark:text-slate-400 w-4 h-4" />
                 <input
                   type="time"
                   :id="`session${index + 1}-start`"
@@ -50,7 +50,7 @@
                 >Session {{ index + 1 }} - Gehen:</label
               >
               <div class="flex items-center space-x-4 w-full">
-                <LucideClock class="text-slate-600 dark:text-slate-400" />
+                <LucideClock class="text-slate-600 dark:text-slate-400 w-4 h-4" />
                 <input
                   type="time"
                   :id="`session${index + 1}-end`"
@@ -63,42 +63,41 @@
             </div>
           </div>
         </div>
-        <div class="buttons-container flex flex-wrap justify-center gap-3 sm:gap-6">
+        <div class="buttons-container flex flex-wrap justify-center gap-3 sm:gap-6 mt-6">
           <button
             @click="addSession"
             class="dark:bg-transparent text-xs sm:text-base bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-full shadow-lg flex items-center space-x-2 sm:space-x-3 transition-transform transform hover:scale-105"
           >
-            <LucidePlus class="text-white" />
+            <LucidePlus class="text-white w-4 h-4" />
             <span>Add Session</span>
           </button>
           <button
             @click="addBreak"
             class="dark:bg-transparent text-xs sm:text-base bg-green-600 hover:bg-green-700 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-full shadow-lg flex items-center space-x-2 sm:space-x-3 transition-transform transform hover:scale-105"
           >
-            <LucideCalculator class="text-white" />
+            <LucideCalculator class="text-white w-4 h-4" />
             <span>Add Break</span>
           </button>
           <button
             @click="exportSchedule"
             class="dark:bg-transparent text-xs sm:text-base bg-yellow-600 hover:bg-yellow-700 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-full shadow-lg flex items-center space-x-2 sm:space-x-3 transition-transform transform hover:scale-105"
           >
-            <LucideDownload class="text-white" />
+            <LucideDownload class="text-white w-4 h-4" />
             <span>Export Schedule</span>
           </button>
         </div>
         <div
-          id="result"
           class="result-container p-3 my-3 sm:mt-6 sm:p-6 rounded-lg bg-red-600 dark:bg-slate-600 text-white text-center shadow-md text-sm sm:text-base"
         >
           {{ resultMessage }}
         </div>
         <div
-          id="result"
+          id="schedule-copy-area"
           @click="copySchedule"
           class="result-container p-3 my-3 sm:mt-6 sm:p-6 rounded-lg bg-red-600 dark:bg-slate-600 text-white text-center shadow-md text-sm sm:text-base flex gap-1 justify-center cursor-pointer"
         >
-          <LucideClipboard v-if="!copied" class="text-white" />
-          <CheckCheck v-if="copied" class="text-white" />
+          <LucideClipboard v-if="!copied" class="text-white w-4 h-4" />
+          <CheckCheck v-if="copied" class="text-white w-4 h-4" />
           <p class="max-w-[90%]">{{ scheduleText }}</p>
         </div>
       </div>
@@ -118,6 +117,7 @@
 </template>
 
 <script setup>
+// npm run deploy
 import { ref, onMounted, computed } from 'vue'
 import { useSessionStorage, useFps, useBattery, useClipboard } from '@vueuse/core'
 import TimeCounter from './components/TimeCounter.vue'
@@ -131,7 +131,6 @@ import {
   LucideDownload,
   LucideClipboard,
   CheckCheck,
-  LucideSun,
 } from 'lucide-vue-next'
 
 const { isSupported, level } = useBattery()
@@ -141,10 +140,7 @@ const sessions = useSessionStorage('sessions', [
   { start: '12:30', end: '13:00' },
   { start: '13:00', end: '17:30' },
 ])
-const resultMessage = useSessionStorage(
-  'resultMessage',
-  `Total Work Time: 8 hours, 30 minutes, 0 seconds`,
-)
+const resultMessage = useSessionStorage('resultMessage', `Calculating...`)
 const { copy, copied } = useClipboard()
 
 const scheduleText = computed(() => {
@@ -177,7 +173,7 @@ const deleteSession = (index) => {
 const addMinutesToTime = (time, minutes) => {
   const [hours, mins] = time.split(':').map(Number)
   const totalMinutes = hours * 60 + mins + minutes
-  const newHours = Math.floor(totalMinutes / 60)
+  const newHours = Math.floor(totalMinutes / 60) % 24
   const newMinutes = totalMinutes % 60
   return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
 }
@@ -240,17 +236,8 @@ const handlePaste = (event, index, type) => {
 const copySchedule = () => {
   copy(scheduleText.value)
 }
-</script>
 
-<style>
-.buttons-container {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-.lucide {
-  margin: 5px 5px;
-  width: 15px;
-  height: 15px;
-}
-</style>
+onMounted(() => {
+  calculateWorkHours()
+})
+</script>
