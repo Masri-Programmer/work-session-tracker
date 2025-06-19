@@ -2,7 +2,7 @@
   <div
     class="font-mono bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-slate-800 dark:to-stone-800 text-white min-h-screen flex items-center justify-center"
   >
-    <ToggleTheme/>
+    <ToggleTheme />
     <div class="w-full sm:max-w-4xl p-1 sm:p-8 rounded-xl shadow-2xl">
       <div class="sm:max-h-[90vh] sm:overflow-y-auto p-4 sm:p-8 space-y-8">
         <h1 class="text-xl sm:text-3xl font-extrabold text-center text-white">
@@ -99,7 +99,7 @@
         >
           <LucideClipboard v-if="!copied" class="text-white" />
           <CheckCheck v-if="copied" class="text-white" />
-         <p class="max-w-[90%]"> {{ scheduleText }}</p>
+          <p class="max-w-[90%]">{{ scheduleText }}</p>
         </div>
       </div>
     </div>
@@ -136,10 +136,14 @@ import {
 
 const { isSupported, level } = useBattery()
 const fps = useFps()
-const sessions = useSessionStorage('sessions', [{ start: '08:00', end: '12:00' }])
+const sessions = useSessionStorage('sessions', [
+  { start: '09:00', end: '12:30' },
+  { start: '12:30', end: '13:00' },
+  { start: '13:00', end: '17:30' },
+])
 const resultMessage = useSessionStorage(
   'resultMessage',
-  `Total Work Time: 4 hours, 0 minutes, 0 seconds`,
+  `Total Work Time: 8 hours, 30 minutes, 0 seconds`,
 )
 const { copy, copied } = useClipboard()
 
@@ -218,21 +222,20 @@ const timeToSeconds = (time) => {
 }
 
 const handlePaste = (event, index, type) => {
-  const pastedData = event.clipboardData.getData('text');
-const timeRegex = /^(\d{2}):(\d{2})(?::\d{2})?$/;
-  const match = pastedData.match(timeRegex);
+  const pastedData = event.clipboardData.getData('text')
+  const timeRegex = /^(\d{2}):(\d{2})(?::\d{2})?$/
+  const match = pastedData.match(timeRegex)
   if (match) {
-    const formattedTime = `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`;
+    const formattedTime = `${match[1].padStart(2, '0')}:${match[2].padStart(2, '0')}`
     if (type === 'start') {
-      sessions.value[index].start = formattedTime;
+      sessions.value[index].start = formattedTime
     } else {
-      sessions.value[index].end = formattedTime;
+      sessions.value[index].end = formattedTime
     }
 
-    calculateWorkHours();
+    calculateWorkHours()
   }
-};
-
+}
 
 const copySchedule = () => {
   copy(scheduleText.value)
