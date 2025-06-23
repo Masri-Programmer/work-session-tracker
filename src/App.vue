@@ -152,22 +152,52 @@ const addMinutesToTime = (time, minutes) => {
   return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
 }
 
+const timeToSeconds = (time) => {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 3600 + minutes * 60
+}
+
 const initializeDefaultSchedule = () => {
   const now = new Date()
-  const startTime = `${String(now.getHours()).padStart(2, '0')}:${String(
+  let startTime = `${String(now.getHours()).padStart(2, '0')}:${String(
     now.getMinutes(),
   ).padStart(2, '0')}`
 
-  // 4 hours of work, 30 min break, then another 4 hours of work
-  const firstWorkBlockEndTime = addMinutesToTime(startTime, 4 * 60)
-  const breakDuration = 30
-  const secondWorkBlockStartTime = addMinutesToTime(firstWorkBlockEndTime, breakDuration)
-  const secondWorkBlockEndTime = addMinutesToTime(secondWorkBlockStartTime, 4 * 60)
+  const breakStart = '12:00'
+  const breakEnd = '12:30'
+  const totalWorkMinutes = 8 * 60
 
-  sessions.value = [
-    { start: startTime, end: firstWorkBlockEndTime },
-    { start: secondWorkBlockStartTime, end: secondWorkBlockEndTime },
-  ]
+  const startTimeInSeconds = timeToSeconds(startTime)
+  const breakStartInSeconds = timeToSeconds(breakStart)
+  const breakEndInSeconds = timeToSeconds(breakEnd)
+
+  // If user starts during the break, adjust their start time to the end of the break.
+  if (startTimeInSeconds > breakStartInSeconds && startTimeInSeconds < breakEndInSeconds) {
+    startTime = breakEnd
+  }
+
+  // If the workday starts at or before the fixed break begins.
+  if (timeToSeconds(startTime) <= breakStartInSeconds) {
+    const morningWorkMinutes = (breakStartInSeconds - timeToSeconds(startTime)) / 60
+    const remainingWorkMinutes = totalWorkMinutes - Math.max(0, morningWorkMinutes)
+    const finalEndTime = addMinutesToTime(breakEnd, remainingWorkMinutes)
+
+    sessions.value = [
+      { start: startTime, end: breakStart },
+      { start: breakEnd, end: finalEndTime },
+    ]
+  } else {
+    // If the workday starts after the fixed break is over.
+    // The 12:00 break is in the past, so create a new break after 4 hours of work.
+    const firstSessionEnd = addMinutesToTime(startTime, 4 * 60)
+    const secondSessionStart = addMinutesToTime(firstSessionEnd, 30)
+    const secondSessionEnd = addMinutesToTime(secondSessionStart, 4 * 60)
+
+    sessions.value = [
+      { start: startTime, end: firstSessionEnd },
+      { start: secondSessionStart, end: secondSessionEnd },
+    ]
+  }
 }
 
 const addSession = () => {
@@ -223,11 +253,6 @@ const exportSchedule = () => {
   link.href = URL.createObjectURL(blob)
   link.download = 'schedule.json'
   link.click()
-}
-
-const timeToSeconds = (time) => {
-  const [hours, minutes] = time.split(':').map(Number)
-  return hours * 3600 + minutes * 60
 }
 
 const handlePaste = (event, index, type) => {
