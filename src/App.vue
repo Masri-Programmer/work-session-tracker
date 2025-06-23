@@ -117,7 +117,6 @@
 </template>
 
 <script setup>
-// npm run deploy
 import { ref, onMounted, computed } from 'vue'
 import { useSessionStorage, useFps, useBattery, useClipboard } from '@vueuse/core'
 import TimeCounter from './components/TimeCounter.vue'
@@ -135,11 +134,7 @@ import {
 
 const { isSupported, level } = useBattery()
 const fps = useFps()
-const sessions = useSessionStorage('sessions', [
-  { start: '09:00', end: '12:30' },
-  { start: '12:30', end: '13:00' },
-  { start: '13:00', end: '17:30' },
-])
+const sessions = useSessionStorage('sessions', [])
 const resultMessage = useSessionStorage('resultMessage', `Calculating...`)
 const { copy, copied } = useClipboard()
 
@@ -148,6 +143,32 @@ const scheduleText = computed(() => {
     .map((session, index) => `Session ${index + 1}: ${session.start} - ${session.end}`)
     .join('\n')
 })
+
+const addMinutesToTime = (time, minutes) => {
+  const [hours, mins] = time.split(':').map(Number)
+  const totalMinutes = hours * 60 + mins + minutes
+  const newHours = Math.floor(totalMinutes / 60) % 24
+  const newMinutes = totalMinutes % 60
+  return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
+}
+
+const initializeDefaultSchedule = () => {
+  const now = new Date()
+  const startTime = `${String(now.getHours()).padStart(2, '0')}:${String(
+    now.getMinutes(),
+  ).padStart(2, '0')}`
+
+  // 4 hours of work, 30 min break, then another 4 hours of work
+  const firstWorkBlockEndTime = addMinutesToTime(startTime, 4 * 60)
+  const breakDuration = 30
+  const secondWorkBlockStartTime = addMinutesToTime(firstWorkBlockEndTime, breakDuration)
+  const secondWorkBlockEndTime = addMinutesToTime(secondWorkBlockStartTime, 4 * 60)
+
+  sessions.value = [
+    { start: startTime, end: firstWorkBlockEndTime },
+    { start: secondWorkBlockStartTime, end: secondWorkBlockEndTime },
+  ]
+}
 
 const addSession = () => {
   const lastSession = sessions.value[sessions.value.length - 1]
@@ -168,14 +189,6 @@ const addBreak = () => {
 const deleteSession = (index) => {
   sessions.value.splice(index, 1)
   calculateWorkHours()
-}
-
-const addMinutesToTime = (time, minutes) => {
-  const [hours, mins] = time.split(':').map(Number)
-  const totalMinutes = hours * 60 + mins + minutes
-  const newHours = Math.floor(totalMinutes / 60) % 24
-  const newMinutes = totalMinutes % 60
-  return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
 }
 
 const calculateWorkHours = () => {
@@ -238,6 +251,11 @@ const copySchedule = () => {
 }
 
 onMounted(() => {
+  // If sessions are empty in storage (e.g., first visit), set up the default schedule.
+  // Otherwise, load the existing schedule from session storage.
+  if (!sessions.value || sessions.value.length === 0) {
+    initializeDefaultSchedule()
+  }
   calculateWorkHours()
 })
 </script>
