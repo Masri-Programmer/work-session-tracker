@@ -119,7 +119,7 @@
   <div
     class="hidden sm:block absolute bottom-4 right-4 dark:text-gray-600 font-serif text-base sm:text-lg italic opacity-70"
   >
-    <span>Masri</span>
+    <span><a href="https://masri-programmer.de" target="_blank">Masri Programmeri</a></span>
   </div>
 </template>
 
@@ -166,9 +166,10 @@ const timeToSeconds = (time) => {
 
 const initializeDefaultSchedule = () => {
   const now = new Date()
-  let startTime = `${String(now.getHours()).padStart(2, '0')}:${String(
-    now.getMinutes(),
-  ).padStart(2, '0')}`
+  let startTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(
+    2,
+    '0',
+  )}`
 
   const breakStart = '12:00'
   const breakEnd = '12:30'
