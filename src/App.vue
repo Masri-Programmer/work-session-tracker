@@ -124,7 +124,6 @@
 </template>
 
 <script setup>
-// npm run deploy
 import { ref, onMounted, computed } from 'vue'
 import { useSessionStorage, useFps, useBattery, useClipboard } from '@vueuse/core'
 import TimeCounter from './components/TimeCounter.vue'
@@ -142,11 +141,7 @@ import {
 
 const { isSupported, level } = useBattery()
 const fps = useFps()
-const sessions = useSessionStorage('sessions', [
-  { start: '09:00', end: '12:30' },
-  { start: '12:30', end: '13:00' },
-  { start: '13:00', end: '17:30' },
-])
+const sessions = useSessionStorage('sessions', [])
 const resultMessage = useSessionStorage('resultMessage', `Calculating...`)
 const { copy, copied } = useClipboard()
 
@@ -155,6 +150,62 @@ const scheduleText = computed(() => {
     .map((session, index) => `Session ${index + 1}: ${session.start} - ${session.end}`)
     .join('\n')
 })
+
+const addMinutesToTime = (time, minutes) => {
+  const [hours, mins] = time.split(':').map(Number)
+  const totalMinutes = hours * 60 + mins + minutes
+  const newHours = Math.floor(totalMinutes / 60) % 24
+  const newMinutes = totalMinutes % 60
+  return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
+}
+
+const timeToSeconds = (time) => {
+  const [hours, minutes] = time.split(':').map(Number)
+  return hours * 3600 + minutes * 60
+}
+
+const initializeDefaultSchedule = () => {
+  const now = new Date()
+  let startTime = `${String(now.getHours()).padStart(2, '0')}:${String(
+    now.getMinutes(),
+  ).padStart(2, '0')}`
+
+  const breakStart = '12:00'
+  const breakEnd = '12:30'
+  const totalWorkMinutes = 8 * 60
+
+  const startTimeInSeconds = timeToSeconds(startTime)
+  const breakStartInSeconds = timeToSeconds(breakStart)
+  const breakEndInSeconds = timeToSeconds(breakEnd)
+
+  // If user starts during the break, adjust their start time to the end of the break.
+  if (startTimeInSeconds > breakStartInSeconds && startTimeInSeconds < breakEndInSeconds) {
+    startTime = breakEnd
+  }
+
+  // If the workday starts at or before the fixed break begins.
+  if (timeToSeconds(startTime) <= breakStartInSeconds) {
+    const morningWorkMinutes = (breakStartInSeconds - timeToSeconds(startTime)) / 60
+    const remainingWorkMinutes = totalWorkMinutes - Math.max(0, morningWorkMinutes)
+    const finalEndTime = addMinutesToTime(breakEnd, remainingWorkMinutes)
+
+    sessions.value = [
+      { start: startTime, end: breakStart },
+      { start: breakEnd, end: finalEndTime },
+    ]
+  } else {
+    // If the workday starts after the fixed break is over.
+    // The 12:00 break is in the past, so create a new break after 4 hours of work.
+    const firstSessionEnd = addMinutesToTime(startTime, 4 * 60)
+    const secondSessionStart = addMinutesToTime(firstSessionEnd, 30)
+    const secondSessionEnd = addMinutesToTime(secondSessionStart, 4 * 60)
+
+    sessions.value = [
+      { start: startTime, end: firstSessionEnd },
+      { start: secondSessionStart, end: secondSessionEnd },
+    ]
+  }
+}
 
 const addSession = () => {
   const lastSession = sessions.value[sessions.value.length - 1]
@@ -183,14 +234,6 @@ const addBreak = () => {
 const deleteSession = (index) => {
   sessions.value.splice(index, 1)
   calculateWorkHours()
-}
-
-const addMinutesToTime = (time, minutes) => {
-  const [hours, mins] = time.split(':').map(Number)
-  const totalMinutes = hours * 60 + mins + minutes
-  const newHours = Math.floor(totalMinutes / 60) % 24
-  const newMinutes = totalMinutes % 60
-  return `${String(newHours).padStart(2, '0')}:${String(newMinutes).padStart(2, '0')}`
 }
 
 const calculateWorkHours = () => {
@@ -227,11 +270,6 @@ const exportSchedule = () => {
   link.click()
 }
 
-const timeToSeconds = (time) => {
-  const [hours, minutes] = time.split(':').map(Number)
-  return hours * 3600 + minutes * 60
-}
-
 const handlePaste = (event, index, type) => {
   const pastedData = event.clipboardData.getData('text')
   const timeRegex = /^(\d{2}):(\d{2})(?::\d{2})?$/
@@ -253,6 +291,11 @@ const copySchedule = () => {
 }
 
 onMounted(() => {
+  // If sessions are empty in storage (e.g., first visit), set up the default schedule.
+  // Otherwise, load the existing schedule from session storage.
+  if (!sessions.value || sessions.value.length === 0) {
+    initializeDefaultSchedule()
+  }
   calculateWorkHours()
 })
 </script>
