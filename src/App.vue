@@ -65,11 +65,18 @@
         </div>
         <div class="buttons-container flex flex-wrap justify-center gap-3 sm:gap-6 mt-6">
           <button
+            @click="resetSession"
+            class="dark:bg-transparent text-xs sm:text-base bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-full shadow-lg flex items-center space-x-2 sm:space-x-3 transition-transform transform hover:scale-105"
+          >
+            <LucidePlus class="text-white w-4 h-4" />
+            <span>Reset</span>
+          </button>
+          <button
             @click="addSession"
             class="dark:bg-transparent text-xs sm:text-base bg-indigo-600 hover:bg-indigo-700 text-white px-4 sm:px-8 py-2 sm:py-4 rounded-full shadow-lg flex items-center space-x-2 sm:space-x-3 transition-transform transform hover:scale-105"
           >
             <LucidePlus class="text-white w-4 h-4" />
-            <span>Add Session</span>
+            <span>Add</span>
           </button>
           <button
             @click="addBreak"
@@ -154,6 +161,14 @@ const addSession = () => {
   const newStartTime = lastSession ? lastSession.end : '08:00'
   const newEndTime = addMinutesToTime(newStartTime, 240)
   sessions.value.push({ start: newStartTime, end: newEndTime })
+  calculateWorkHours()
+}
+const resetSession = () => {
+  sessions.value = [
+    { start: '09:00', end: '12:30' },
+    { start: '12:30', end: '13:00' },
+    { start: '13:00', end: '17:30' },
+  ]
   calculateWorkHours()
 }
 
